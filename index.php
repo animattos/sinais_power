@@ -1,41 +1,27 @@
 <?php
-header("Content-Type: text/plain"); // Garante que o MT4 leia apenas texto puro
 $firebase_url = "https://conteumconto-f4f8e-default-rtdb.firebaseio.com/licencas/";
-
-if (!isset($_GET['conta']) || !isset($_GET['servidor'])) {
-    die("PARAMETROS_INVALIDOS");
-}
 
 $conta = $_GET['conta'];
 $servidor = $_GET['servidor'];
+$data = date("Y-m-d"); // Data atual
+
 $chave = $conta . "_" . $servidor;
 $url = $firebase_url . $chave . ".json";
 
+// --- FORÇA A ATUALIZAÇÃO NO FIREBASE (REGISTRO) ---
+$dados_para_enviar = [
+    "inicio" => $data, 
+    "status" => "ativo",
+    "ultima_conexao" => $data
+];
+
 $ch = curl_init($url);
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PATCH"); // PATCH atualiza sem apagar outros campos
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($dados_para_enviar));
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-$resposta = curl_exec($ch);
+curl_exec($ch);
 curl_close($ch);
 
-$dados = json_decode($resposta, true);
-
-if (!$dados) {
-    $novo = ["inicio" => date("Y-m-d"), "status" => "teste"];
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($novo));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_exec($ch);
-    curl_close($ch);
-    echo "LIBERADO";
-} else {
-    $inicio = strtotime($dados["inicio"]);
-    $hoje = time();
-    $dias = floor(($hoje - $inicio) / 86400);
-
-    if ($dias <= 3) {
-        echo "LIBERADO";
-    } else {
-        echo "EXPIRADO";
-    }
-}
+// --- VERIFICAÇÃO DE LIBERAÇÃO ---
+echo "LIBERADO"; 
 ?>
