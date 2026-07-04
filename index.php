@@ -1,36 +1,64 @@
 <?php
-// URL do seu Realtime Database (coloque seu link aqui)
-$firebase_url = "https://SEU_PROJETO_FIREBASE.firebaseio.com/licencas/";
 
-$conta = $_GET['conta'];
-$servidor = $_GET['servidor'];
+// URL do Firebase
+$firebase_url = "https://conteumconto-f4f8e-default-rtdb.firebaseio.com/licencas/";
+
+// Verifica parâmetros
+$conta    = $_GET['conta'] ?? '';
+$servidor = $_GET['servidor'] ?? '';
+
+if ($conta == '' || $servidor == '') {
+    die("PARAMETROS_INVALIDOS");
+}
+
+// Monta chave única
 $chave = $conta . "_" . $servidor;
 
-// 1. Tenta buscar a conta no Firebase
+// URL do registro
 $url = $firebase_url . $chave . ".json";
+
+// Busca registro existente
 $ch = curl_init($url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 $resposta = curl_exec($ch);
+curl_close($ch);
+
 $dados = json_decode($resposta, true);
 
-// 2. Se a conta não existe, cria ela automaticamente com status "teste"
-if (!$dados) {
+// Se não existe, cria automaticamente
+if (!$dados)
+{
     $novo_registro = [
         "inicio" => date("Y-m-d"),
         "status" => "teste"
     ];
-    
+
     $ch_put = curl_init($url);
     curl_setopt($ch_put, CURLOPT_CUSTOMREQUEST, "PUT");
     curl_setopt($ch_put, CURLOPT_POSTFIELDS, json_encode($novo_registro));
+    curl_setopt($ch_put, CURLOPT_HTTPHEADER, [
+        "Content-Type: application/json"
+    ]);
     curl_setopt($ch_put, CURLOPT_RETURNTRANSFER, true);
+
     curl_exec($ch_put);
     curl_close($ch_put);
-    
-    echo "teste"; // Responde ao MT4 que acabou de ser criado como teste
-} else {
-    // Se já existe, apenas retorna o status atual
-    echo $dados['status'];
+
+    echo "LIBERADO";
+    exit;
 }
-curl_close($ch);
+
+// Já existe
+$status = $dados['status'] ?? 'bloqueado';
+
+// Libera apenas teste ou assinante
+if ($status == "teste" || $status == "assinante")
+{
+    echo "LIBERADO";
+}
+else
+{
+    echo "BLOQUEADO";
+}
+
 ?>
